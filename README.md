@@ -21,3 +21,4 @@ K-City 맵만 시나리오 수정 가능
     options:
 
       --disturbance <disturbance> : Select the disturbance that applies to your input scenario. [rain, snow, fallOBJ]
+      --action <action> : Select the Ego action after meet falling objects. [lanechange, stop]
