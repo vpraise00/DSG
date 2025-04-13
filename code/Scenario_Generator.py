@@ -1,6 +1,7 @@
 #! python3
 
 import argparse
+import random
 from pathlib import Path
 from lxml import etree
 
@@ -8,6 +9,7 @@ def agr_parser():
     parser = argparse.ArgumentParser(description="Add disturbance to the scenario.")
     parser.add_argument("input_file", type=str, help="Input File (.xosc)")
     parser.add_argument("--disturbance", type=str, choices=["rain", "snow", "fallOBJ"], help="Disturbance type [rain, snow, fallOBJ]", required=True)
+    parser.add_argument("--action", type=str, choices=["lanechange", "stop"], help="Action type only required in fallOBJ [lanechange, stop]")
     args = parser.parse_args()
 
     return args
@@ -48,6 +50,20 @@ if __name__ == "__main__":
         if actions is None:
             raise ValueError("Storyboard/Init/Actions block not found in the input scenario file.")
         actions.append(private_storyboard(root))
+        # 3. 지정된 위치에 Ego의 stop, lc 액션 추가
+        act = root.find(".//Story[@name='new_story']/Act[@name='new_act']")
+        if act is None:
+            raise ValueError("Act element with name 'new_act' not found in new_story.")
+        if args.action == "lanechange":
+            from falling_obj_rootcause import add_Ego_lanechange_action
+            act.append(add_Ego_lanechange_action(root))
+            print("Ego lane change action added.")
+        elif args.action == "stop":
+            from falling_obj_rootcause import add_Ego_stop_action
+            act.append(add_Ego_stop_action(root))
+            print("Ego stop action added.")
+        else:
+            raise ValueError("Invalid action type. Choose 'lanechange' or 'stop'.")
     else:
         raise ValueError("Invalid disturbance type. Choose 'rain' or 'snow' or 'fallOBJ'.")
     
