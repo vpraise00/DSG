@@ -156,23 +156,18 @@ def add_Ego_stop_action_rel(scenario_root):
     return mg
 
 
-def private_storyboard_rel(scenario_root):
+def private_storyboard_rel(scenario_root, distance="30"):
     """
-    Create a private storyboard for the object.
+    Create a private storyboard for the object using RelativeObjectPosition.
+    The object will be placed 'distance' meters ahead of the Ego vehicle in its coordinate system.
     """
-
-    # Extract the ego link position from the scenario root
-    ego_id, ego_index = get_ego_linkposition(scenario_root)
-
-    new_index = random.randint(ego_index + 50, ego_index + 150)
-
-    private = etree.Element("Private", entityRef = "OBJ")
+    private = etree.Element("Private", entityRef="OBJ")
     private_action = etree.SubElement(private, "PrivateAction")
     teleport_action = etree.SubElement(private_action, "TeleportAction")
     position = etree.SubElement(teleport_action, "Position")
-    # 생성하는 RelativeObjectPosition: ego의 좌표계 기준, 전방 50m, lateral=0, dz=0 (기본값)
+    # 사용자가 입력한 distance 값을 dx로 적용 (dy와 dz는 0)
     etree.SubElement(position, "RelativeObjectPosition",
-                     entityRef="Ego", dx="50", dy="0", dz="0")
+                     entityRef="Ego", dx=str(distance), dy="0", dz="0")
     return private
 
 def get_ego_linkposition(scenario_root):
