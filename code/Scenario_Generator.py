@@ -82,13 +82,13 @@ if __name__ == "__main__":
             raise ValueError("Act element with name 'new_act' not found in new_story.")
         if args.action == "lanechange":
             if obj_module == "relative":
-                act.append(add_Ego_lanechange_action_rel(root))
+                act.append(add_Ego_lanechange_action_rel(root, args.distance))
             else:
                 act.append(add_Ego_lanechange_action(root))
             print("Ego lane change action added.")
         elif args.action == "stop":
             if obj_module == "relative":
-                act.append(add_Ego_stop_action_rel(root))
+                act.append(add_Ego_stop_action_rel(root, args.distance))
             else:
                 act.append(add_Ego_stop_action(root))
             print("Ego stop action added.")

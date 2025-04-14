@@ -43,7 +43,7 @@ def get_ego_absolutetargetspeed(scenario_root):
     except (ValueError, TypeError):
         raise ValueError("Ego AbsoluteTargetSpeed value is not numeric.")
 
-def add_Ego_lanechange_action_rel(scenario_root):
+def add_Ego_lanechange_action_rel(scenario_root, distance_input):
     """
     Create and return a ManeuverGroup for Ego lane change action.
     
@@ -85,19 +85,18 @@ def add_Ego_lanechange_action_rel(scenario_root):
     entity_condition = etree.SubElement(by_entity_condition, "EntityCondition")
     # Retrieve Ego's AbsoluteTargetSpeed and compute threshold (3/2 * speed)
     ego_speed = get_ego_absolutetargetspeed(scenario_root)
-    threshold = ego_speed * 1.5
+    threshold = min(ego_speed * 0.9, distance_input)
     
-    distance_condition = etree.SubElement(entity_condition, "DistanceCondition",
-                                          coordinateSystem="entity", freespace="false",
+    distance_condition = etree.SubElement(entity_condition, "RelativeDistanceCondition",
+                                          coordinateSystem="entity",
+                                          entityRef="OBJ",  # OBJ를 기준으로 상대 거리 계산
+                                          freespace="true",  # 필요에 따라 조정 가능
                                           relativeDistanceType="euclideanDistance",
                                           routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
-    pos = etree.SubElement(distance_condition, "Position")
-    dx, dy, dz = get_obj_position_from_private_rel(scenario_root)
-    etree.SubElement(pos, "RelativeObjectPosition", entityRef="Ego", dx=dx, dy=dy, dz=dz)
     
     return mg
 
-def add_Ego_stop_action_rel(scenario_root):
+def add_Ego_stop_action_rel(scenario_root, distance_input):
     """
     Create and return a ManeuverGroup for Ego stop action.
     
@@ -143,15 +142,14 @@ def add_Ego_stop_action_rel(scenario_root):
     entity_condition = etree.SubElement(by_entity_condition, "EntityCondition")
     # Retrieve Ego's AbsoluteTargetSpeed and compute threshold (3/2 * speed)
     ego_speed = get_ego_absolutetargetspeed(scenario_root)
-    threshold = ego_speed * 1.5
+    threshold = min(ego_speed * 1.5, distance_input)
     
-    distance_condition = etree.SubElement(entity_condition, "DistanceCondition",
-                                          coordinateSystem="entity", freespace="false",
+    distance_condition = etree.SubElement(entity_condition, "RelativeDistanceCondition",
+                                          coordinateSystem="entity",
+                                          entityRef="OBJ",  # OBJ를 기준으로 상대 거리 계산
+                                          freespace="true",  # 필요에 따라 조정 가능
                                           relativeDistanceType="euclideanDistance",
                                           routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
-    pos = etree.SubElement(distance_condition, "Position")
-    dx, dy, dz = get_obj_position_from_private_rel(scenario_root)
-    etree.SubElement(pos, "RelativeObjectPosition", entityRef="Ego", dx=dx, dy=dy, dz=dz)
     
     return mg
 
