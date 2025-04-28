@@ -5,7 +5,7 @@ import math
 def weather_rain():
     root = etree.Element("ManeuverGroup")
     root.set("maximumExecutionCount", "1")
-    root.set("name", "new_maneuverGroup")
+    root.set("name", "weather_maneuver_group")
 
     actors = etree.SubElement(root, "Actors", selectTriggeringEntities="false")
     maneuver = etree.SubElement(root, "Maneuver", name="Maneuver_weather_event")
@@ -37,7 +37,7 @@ def weather_rain():
 def weather_snow():
     root = etree.Element("ManeuverGroup")
     root.set("maximumExecutionCount", "1")
-    root.set("name", "new_maneuverGroup")
+    root.set("name", "weather_maneuver_group")
 
     actors = etree.SubElement(root, "Actors", selectTriggeringEntities="false")
     maneuver = etree.SubElement(root, "Maneuver", name="Maneuver_weather_event")

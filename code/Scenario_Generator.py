@@ -5,11 +5,13 @@ import random
 from pathlib import Path
 from lxml import etree
 
-def agr_parser():
+from falling_obj_rootcause import *
+
+def arg_parser():
     parser = argparse.ArgumentParser(description="Add disturbance to the scenario.")
     parser.add_argument("input_file", type=str, help="Input File (.xosc)")
-    parser.add_argument("--disturbance", type=str, choices=["rain", "snow", "fallOBJ"], 
-                        help="Disturbance type [rain, snow, fallOBJ]", required=True)
+    parser.add_argument("--disturbance", type=str, choices=["rain", "snow", "fallOBJ", "construction"], 
+                        help="Disturbance type [rain, snow, fallOBJ, construction]", required=True)
     parser.add_argument("--obj_pos", type=str, choices=["relative", "link"], default="relative", 
                         help="Object position definition [relative, link]")
     parser.add_argument("--action", type=str, choices=["lanechange", "stop"], default="stop", 
@@ -21,7 +23,17 @@ def agr_parser():
     return args
 
 if __name__ == "__main__":
-    args = agr_parser()
+    args = argparse.ArgumentParser()
+    try:
+        args = arg_parser()
+    except:
+    #test
+        args.input_file = "D:\\TUK\\AILAB\\datasets\\[MORAI] T-Car Lv.4  Autonomous Vehicle V&V Scenario\\T_CAR\\R_KR_PG_K-City\\tcar_t1_10.xosc"
+        args.disturbance = "fallOBJ"
+        args.obj_pos = "relative"
+        args.action = "lanechange"
+        args.distance = 50
+
     print(args)
     print(args.input_file)
     print("Selected Root Cause : ", args.disturbance)
@@ -29,6 +41,7 @@ if __name__ == "__main__":
     if args.action:
         print("Action type:", args.action)
     print("Distance for object placement:", args.distance)
+
 
     input_path = Path(args.input_file).resolve()
     data_dir = input_path.parent
@@ -51,10 +64,8 @@ if __name__ == "__main__":
     elif args.disturbance == "fallOBJ":
         # 추가: --object 인자에 따라 사용 모듈 결정
         if args.obj_pos == "relative":
-            from falling_obj_rootcause_rel import falled_object, private_storyboard_rel, add_Ego_lanechange_action_rel, add_Ego_stop_action_rel
             obj_module = "relative"
         elif args.obj_pos == "link":
-            from falling_obj_rootcause import falled_object, private_storyboard, add_Ego_lanechange_action, add_Ego_stop_action
             obj_module = "link"
         else:
             raise ValueError("Invalid object method. Choose 'relative' or 'link'.")
@@ -82,24 +93,38 @@ if __name__ == "__main__":
             raise ValueError("Act element with name 'new_act' not found in new_story.")
         if args.action == "lanechange":
             if obj_module == "relative":
-                act.append(add_Ego_lanechange_action_rel(root, args.distance))
+                act.append(add_Ego_lanechange_action(root, args.distance))
             else:
                 act.append(add_Ego_lanechange_action(root))
             print("Ego lane change action added.")
         elif args.action == "stop":
             if obj_module == "relative":
-                act.append(add_Ego_stop_action_rel(root, args.distance))
+                act.append(add_Ego_stop_action(root, args.distance))
             else:
                 act.append(add_Ego_stop_action(root))
             print("Ego stop action added.")
         else:
             raise ValueError("Invalid action type. Choose 'lanechange' or 'stop'.")
+    elif args.disturbance == "construction":
+        from rightmost_construction_rootcause import add_rightmost_construction, get_road_network_path
+        mgeo_dir = data_dir / get_road_network_path(root)
+        mgeo_link_set_path = mgeo_dir / "link_set.json"
+
+        entities = root.find(".//Entities")
+        if entities is None:
+            raise ValueError("Entities block not found in the input scenario file.")
+        entities.append(falled_object())
+
+        actions = root.find(".//Storyboard/Init/Actions")
+        if actions is None:
+            raise ValueError("Storyboard/Init/Actions block not found in the input scenario file.")
+        actions.append(add_rightmost_construction(root, mgeo_link_set_path))
     else:
         raise ValueError("Invalid disturbance type. Choose 'rain' or 'snow' or 'fallOBJ'.")
     
     # Weather RootCause인 경우에만 Act 블록에 ManeuverGroup 추가
     if maneuverGroup is not None:
-        target_elements = tree.xpath("//Act")
+        target_elements = root.findall(".//Act")
         if target_elements:
             target = target_elements[0]
             target.append(maneuverGroup)

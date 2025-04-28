@@ -26,6 +26,20 @@ def get_obj_position_from_private(scenario_root):
         raise ValueError("OBJ LinkPosition not found in the Private element.")
     return lp.attrib.get("id"), lp.attrib.get("index")
 
+def get_obj_position_from_private_rel(scenario_root):
+    """
+    Retrieve the RelativeObjectPosition attributes of the falling object (OBJ)
+    from the Private element.
+    Returns dx, dy, dz values as strings.
+    """
+    rop = scenario_root.find(".//Private[@entityRef='OBJ']/PrivateAction/TeleportAction/Position/RelativeObjectPosition")
+    if rop is None:
+        raise ValueError("RelativeObjectPosition not found in the Private element.")
+    dx = rop.attrib.get("dx")
+    dy = rop.attrib.get("dy")
+    dz = rop.attrib.get("dz", "0")
+    return dx, dy, dz
+
 def get_ego_absolutetargetspeed(scenario_root):
     """
     Retrieve the AbsoluteTargetSpeed value for Ego from the scenario.
@@ -39,7 +53,7 @@ def get_ego_absolutetargetspeed(scenario_root):
     except (ValueError, TypeError):
         raise ValueError("Ego AbsoluteTargetSpeed value is not numeric.")
 
-def add_Ego_lanechange_action(scenario_root):
+def add_Ego_lanechange_action(scenario_root, distance_input=None):
     """
     Create and return a ManeuverGroup for Ego lane change action.
     
@@ -48,7 +62,7 @@ def add_Ego_lanechange_action(scenario_root):
     이용해 동적으로 추출할 수도 있습니다.)
     """
     # ManeuverGroup 생성
-    mg = etree.Element("ManeuverGroup", maximumExecutionCount="1", name="ManueverGroup_Ego_event")
+    mg = etree.Element("ManeuverGroup", maximumExecutionCount="1", name="lane_change_maneuver_group")
     
     # Actors 블록 생성 및 Ego EntityRef 추가
     actors = etree.SubElement(mg, "Actors", selectTriggeringEntities="false")
@@ -81,19 +95,32 @@ def add_Ego_lanechange_action(scenario_root):
     entity_condition = etree.SubElement(by_entity_condition, "EntityCondition")
     # Retrieve Ego's AbsoluteTargetSpeed and compute threshold (3/2 * speed)
     ego_speed = get_ego_absolutetargetspeed(scenario_root)
-    threshold = ego_speed * 1.5
-    
-    distance_condition = etree.SubElement(entity_condition, "DistanceCondition",
-                                          coordinateSystem="entity", freespace="false",
-                                          relativeDistanceType="euclideanDistance",
-                                          routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
-    pos = etree.SubElement(distance_condition, "Position")
-    obj_id, obj_index = get_obj_position_from_private(scenario_root)
-    etree.SubElement(pos, "LinkPosition", id=obj_id, index=obj_index)
-    
-    return mg
 
-def add_Ego_stop_action(scenario_root):
+    if distance_input is None:
+        threshold = ego_speed * 1.5
+        
+        distance_condition = etree.SubElement(entity_condition, "DistanceCondition",
+                                            coordinateSystem="entity", freespace="false",
+                                            relativeDistanceType="euclideanDistance",
+                                            routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
+        pos = etree.SubElement(distance_condition, "Position")
+        obj_id, obj_index = get_obj_position_from_private(scenario_root)
+        etree.SubElement(pos, "LinkPosition", id=obj_id, index=obj_index)
+        
+        return mg
+    else:
+        threshold = min(ego_speed * 0.9, distance_input)
+    
+        distance_condition = etree.SubElement(entity_condition, "RelativeDistanceCondition",
+                                            coordinateSystem="entity",
+                                            entityRef="OBJ",  # OBJ를 기준으로 상대 거리 계산
+                                            freespace="true",  # 필요에 따라 조정 가능
+                                            relativeDistanceType="euclideanDistance",
+                                            routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
+        
+        return mg
+
+def add_Ego_stop_action(scenario_root, distance_input=None):
     """
     Create and return a ManeuverGroup for Ego stop action.
     
@@ -102,7 +129,7 @@ def add_Ego_stop_action(scenario_root):
     is less than 10. The DistanceCondition's Position element uses the falling object's 
     LinkPosition information (from the Private element) to establish the reference.
     """
-    mg = etree.Element("ManeuverGroup", maximumExecutionCount="1", name="ManueverGroup_Ego_event")
+    mg = etree.Element("ManeuverGroup", maximumExecutionCount="1", name="stop_maneuver_group")
     
     # Actors 블록 생성 및 Ego EntityRef 추가
     actors = etree.SubElement(mg, "Actors", selectTriggeringEntities="false")
@@ -139,18 +166,30 @@ def add_Ego_stop_action(scenario_root):
     entity_condition = etree.SubElement(by_entity_condition, "EntityCondition")
     # Retrieve Ego's AbsoluteTargetSpeed and compute threshold (3/2 * speed)
     ego_speed = get_ego_absolutetargetspeed(scenario_root)
-    threshold = ego_speed * 1.5
-    
-    distance_condition = etree.SubElement(entity_condition, "DistanceCondition",
-                                          coordinateSystem="entity", freespace="false",
-                                          relativeDistanceType="euclideanDistance",
-                                          routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
-    pos = etree.SubElement(distance_condition, "Position")
-    obj_id, obj_index = get_obj_position_from_private(scenario_root)
-    etree.SubElement(pos, "LinkPosition", id=obj_id, index=obj_index)
-    
-    return mg
 
+    if distance_input is None:
+        threshold = ego_speed * 1.5
+        
+        distance_condition = etree.SubElement(entity_condition, "DistanceCondition",
+                                            coordinateSystem="entity", freespace="false",
+                                            relativeDistanceType="euclideanDistance",
+                                            routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
+        pos = etree.SubElement(distance_condition, "Position")
+        obj_id, obj_index = get_obj_position_from_private(scenario_root)
+        etree.SubElement(pos, "LinkPosition", id=obj_id, index=obj_index)
+        
+        return mg
+    else:
+        threshold = min(ego_speed * 1.5, distance_input)
+    
+        distance_condition = etree.SubElement(entity_condition, "RelativeDistanceCondition",
+                                            coordinateSystem="entity",
+                                            entityRef="OBJ",  # OBJ를 기준으로 상대 거리 계산
+                                            freespace="true",  # 필요에 따라 조정 가능
+                                            relativeDistanceType="euclideanDistance",
+                                            routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
+        
+        return mg
 
 def private_storyboard(scenario_root):
     """
@@ -167,6 +206,20 @@ def private_storyboard(scenario_root):
     teleport_action = etree.SubElement(private_action, "TeleportAction")
     position = etree.SubElement(teleport_action, "Position")
     etree.SubElement(position, "LinkPosition", id = ego_id, index = str(new_index))
+    return private
+
+def private_storyboard_rel(scenario_root, distance="30"):
+    """
+    Create a private storyboard for the object using RelativeObjectPosition.
+    The object will be placed 'distance' meters ahead of the Ego vehicle in its coordinate system.
+    """
+    private = etree.Element("Private", entityRef="OBJ")
+    private_action = etree.SubElement(private, "PrivateAction")
+    teleport_action = etree.SubElement(private_action, "TeleportAction")
+    position = etree.SubElement(teleport_action, "Position")
+    # 사용자가 입력한 distance 값을 dx로 적용 (dy와 dz는 0)
+    etree.SubElement(position, "RelativeObjectPosition",
+                     entityRef="Ego", dx=str(distance), dy="0", dz="0")
     return private
 
 def get_ego_linkposition(scenario_root):
