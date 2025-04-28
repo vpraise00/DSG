@@ -41,6 +41,20 @@ def get_obj_position_from_private_rel(scenario_root):
     dz = rop.attrib.get("dz", "0")
     return dx, dy, dz
 
+def get_obj_position_from_private_rel(scenario_root):
+    """
+    Retrieve the RelativeObjectPosition attributes of the falling object (OBJ)
+    from the Private element.
+    Returns dx, dy, dz values as strings.
+    """
+    rop = scenario_root.find(".//Private[@entityRef='OBJ']/PrivateAction/TeleportAction/Position/RelativeObjectPosition")
+    if rop is None:
+        raise ValueError("RelativeObjectPosition not found in the Private element.")
+    dx = rop.attrib.get("dx")
+    dy = rop.attrib.get("dy")
+    dz = rop.attrib.get("dz", "0")
+    return dx, dy, dz
+
 def get_ego_absolutetargetspeed(scenario_root):
     """
     Retrieve the AbsoluteTargetSpeed value for Ego from the scenario.
@@ -237,6 +251,20 @@ def private_storyboard(scenario_root, mgeo_link_set_path, distance_input, obj_po
     else:
         raise ValueError("Invalid object position method. Choose 'relative' or 'link'.")
         
+    return private
+
+def private_storyboard_rel(scenario_root, distance="30"):
+    """
+    Create a private storyboard for the object using RelativeObjectPosition.
+    The object will be placed 'distance' meters ahead of the Ego vehicle in its coordinate system.
+    """
+    private = etree.Element("Private", entityRef="OBJ")
+    private_action = etree.SubElement(private, "PrivateAction")
+    teleport_action = etree.SubElement(private_action, "TeleportAction")
+    position = etree.SubElement(teleport_action, "Position")
+    # 사용자가 입력한 distance 값을 dx로 적용 (dy와 dz는 0)
+    etree.SubElement(position, "RelativeObjectPosition",
+                     entityRef="Ego", dx=str(distance), dy="0", dz="0")
     return private
 
 def get_ego_linkposition(scenario_root):
