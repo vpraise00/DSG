@@ -253,18 +253,20 @@ def private_storyboard(scenario_root, mgeo_link_set_path, distance_input, obj_po
         
     return private
 
-def private_storyboard_rel(scenario_root, distance="30"):
-    """
-    Create a private storyboard for the object using RelativeObjectPosition.
-    The object will be placed 'distance' meters ahead of the Ego vehicle in its coordinate system.
-    """
-    private = etree.Element("Private", entityRef="OBJ")
-    private_action = etree.SubElement(private, "PrivateAction")
-    teleport_action = etree.SubElement(private_action, "TeleportAction")
-    position = etree.SubElement(teleport_action, "Position")
-    # 사용자가 입력한 distance 값을 dx로 적용 (dy와 dz는 0)
-    etree.SubElement(position, "RelativeObjectPosition",
-                     entityRef="Ego", dx=str(distance), dy="0", dz="0")
+    if obj_pos == "link":
+        mgeo_link_set = pd.read_json(mgeo_link_set_path, encoding="utf-8")
+
+        ego_id, ego_index = get_ego_linkposition(scenario_root)
+        ego_index = int(ego_index)
+        distance_input = int(distance_input)
+        dst_index = ego_index + distance_input if ego_index + distance_input < len(mgeo_link_set[mgeo_link_set["idx"] == ego_id]["points"].values[0]) else len(mgeo_link_set[mgeo_link_set["idx"] == ego_id]["points"].values[0]) - 1
+        etree.SubElement(position, "LinkPosition", id=ego_id, index=str(dst_index))
+    elif obj_pos == "relative":
+        etree.SubElement(position, "RelativeObjectPosition",
+                    entityRef="Ego", dx=str(distance_input), dy="0", dz="0")
+    else:
+        raise ValueError("Invalid object position method. Choose 'relative' or 'link'.")
+        
     return private
 
 def get_ego_linkposition(scenario_root):
