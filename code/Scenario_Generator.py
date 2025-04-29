@@ -1,11 +1,9 @@
-#! python3
-
 import argparse
-import random
 from pathlib import Path
-from lxml import etree
+from lxml import etree as ET
 
 from falling_obj_rootcause import *
+from rightmost_construction_rootcause import *
 
 def arg_parser():
     parser = argparse.ArgumentParser(description="Add disturbance to the scenario.")
@@ -22,17 +20,9 @@ def arg_parser():
 
     return args
 
-if __name__ == "__main__":
-    args = argparse.ArgumentParser()
-    try:
-        args = arg_parser()
-    except:
-    #test
-        args.input_file = "D:\\TUK\\AILAB\\datasets\\[MORAI] T-Car Lv.4  Autonomous Vehicle V&V Scenario\\T_CAR\\R_KR_PG_K-City\\tcar_t1_10.xosc"
-        args.disturbance = "fallOBJ"
-        args.obj_pos = "relative"
-        args.action = "lanechange"
-        args.distance = 50
+def main():
+
+    args = arg_parser()
 
     print(args)
     print(args.input_file)
@@ -46,90 +36,54 @@ if __name__ == "__main__":
     input_path = Path(args.input_file).resolve()
     data_dir = input_path.parent
     output_path = data_dir / f"{input_path.name[:-5]}_{args.disturbance}.xosc"
+    mgeo_dir = data_dir / "MGeo"
+    mgeo_link_set_path = mgeo_dir / "link_set.json"
 
     if not input_path.is_file():
         raise FileNotFoundError(f"Input file {input_path} does not exist.")
-
-    tree = etree.parse(input_path)
+    if not mgeo_link_set_path.is_file():
+        raise FileNotFoundError(f"MGeo link set file {mgeo_link_set_path} does not exist.")
+    
+    tree = ET.parse(input_path)
     root = tree.getroot()
 
-    maneuverGroup = None # Initialize maneuverGroup to None
+    # 1. Entities 블록에 falling object 추가
+    entities = root.find(".//Entities")
+    if entities is None:
+        raise ValueError("Entities block not found in the input scenario file.")
+    
+    # 2. Storyboard/Init/Actions 블록에 Private 요소 추가
+    actions = root.find(".//Storyboard/Init/Actions")
+    if actions is None:
+        raise ValueError("Storyboard/Init/Actions block not found in the input scenario file.")
+    
+    # 3. 지정된 위치에 Ego의 액션 추가 (lanechange 또는 stop, --action 인자 사용)
+    act = root.find(".//Storyboard/Story[@name='new_story']/Act[@name='new_act']")
+    if act is None:
+        raise ValueError("Act element with name 'new_act' not found in new_story.")
 
     if args.disturbance == "rain":
         from weather_rootcause import weather_rain
-        maneuverGroup = weather_rain()
-    elif args.disturbance == "snow":
+        act.append(weather_rain())
+    if args.disturbance == "snow":
         from weather_rootcause import weather_snow
-        maneuverGroup = weather_snow()
-    elif args.disturbance == "fallOBJ":
-        # 추가: --object 인자에 따라 사용 모듈 결정
-        if args.obj_pos == "relative":
-            obj_module = "relative"
-        elif args.obj_pos == "link":
-            obj_module = "link"
-        else:
-            raise ValueError("Invalid object method. Choose 'relative' or 'link'.")
-        
-        # 1. Entities 블록에 falling object 추가
-        entities = root.find(".//Entities")
-        if entities is None:
-            raise ValueError("Entities block not found in the input scenario file.")
+        act.append(weather_snow())
+    if args.disturbance == "fallOBJ":
         entities.append(falled_object())
-        
-        # 2. Storyboard/Init/Actions 블록에 Private 요소 추가
-        actions = root.find(".//Storyboard/Init/Actions")
-        if actions is None:
-            raise ValueError("Storyboard/Init/Actions block not found in the input scenario file.")
-        # object 방식에 따라 호출: 여기는 --object 인자로 결정되고, 디폴트는 "relative"일 것임
-        if obj_module == "relative":
-            actions.append(private_storyboard_rel(root, args.distance))
-        else:
-            # 기존 방식을 사용하면 private_storyboard(root)를 호출
-            actions.append(private_storyboard(root))
-        
-        # 3. 지정된 위치에 Ego의 액션 추가 (lanechange 또는 stop, --action 인자 사용)
-        act = root.find(".//Story[@name='new_story']/Act[@name='new_act']")
-        if act is None:
-            raise ValueError("Act element with name 'new_act' not found in new_story.")
-        if args.action == "lanechange":
-            if obj_module == "relative":
-                act.append(add_Ego_lanechange_action(root, args.distance))
-            else:
-                act.append(add_Ego_lanechange_action(root))
-            print("Ego lane change action added.")
-        elif args.action == "stop":
-            if obj_module == "relative":
-                act.append(add_Ego_stop_action(root, args.distance))
-            else:
-                act.append(add_Ego_stop_action(root))
-            print("Ego stop action added.")
-        else:
-            raise ValueError("Invalid action type. Choose 'lanechange' or 'stop'.")
-    elif args.disturbance == "construction":
-        from rightmost_construction_rootcause import add_rightmost_construction, get_road_network_path
-        mgeo_dir = data_dir / get_road_network_path(root)
-        mgeo_link_set_path = mgeo_dir / "link_set.json"
-
-        entities = root.find(".//Entities")
-        if entities is None:
-            raise ValueError("Entities block not found in the input scenario file.")
+        actions.append(private_storyboard(root, mgeo_link_set_path, args.distance, args.obj_pos))
+    if args.disturbance == "construction":
+        from rightmost_construction_rootcause import add_rightmost_construction
         entities.append(falled_object())
+        actions.append(add_rightmost_construction(root, mgeo_link_set_path, 2*args.distance))
 
-        actions = root.find(".//Storyboard/Init/Actions")
-        if actions is None:
-            raise ValueError("Storyboard/Init/Actions block not found in the input scenario file.")
-        actions.append(add_rightmost_construction(root, mgeo_link_set_path))
-    else:
-        raise ValueError("Invalid disturbance type. Choose 'rain' or 'snow' or 'fallOBJ'.")
-    
-    # Weather RootCause인 경우에만 Act 블록에 ManeuverGroup 추가
-    if maneuverGroup is not None:
-        target_elements = root.findall(".//Act")
-        if target_elements:
-            target = target_elements[0]
-            target.append(maneuverGroup)
+    if args.action == "lanechange":
+        act.append(add_Ego_lanechange_action(root, args.distance, args.obj_pos))
+    if args.action == "stop":
+        act.append(add_Ego_stop_action(root, args.distance, args.obj_pos))
 
-    # 파일 저장은 regardless of maneuverGroup
-    etree.indent(root, space="  ")
+    ET.indent(root, space="  ")
     tree.write(output_path, pretty_print=True, encoding="utf-8", xml_declaration=True)
     print(f"Output written to {output_path}")
+
+if __name__ == "__main__":
+    main()
