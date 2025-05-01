@@ -3,12 +3,10 @@ import random
 import math
 
 def weather_rain():
-    root = etree.Element("ManeuverGroup")
-    root.set("maximumExecutionCount", "1")
-    root.set("name", "new_maneuverGroup")
+    maneuverGroup = etree.Element("ManeuverGroup", maximumExecutionCount="1", name="weather_maneuver_group")
 
-    actors = etree.SubElement(root, "Actors", selectTriggeringEntities="false")
-    maneuver = etree.SubElement(root, "Maneuver", name="Maneuver_weather_event")
+    actors = etree.SubElement(maneuverGroup, "Actors", selectTriggeringEntities="false")
+    maneuver = etree.SubElement(maneuverGroup, "Maneuver", name="Maneuver_weather_event")
     event = etree.SubElement(maneuver, "Event", maximumExecutionCount="1", name="weather_event", priority="overwrite")
     action = etree.SubElement(event, "Action", name="rainy_action")
     globalAction = etree.SubElement(action, "GlobalAction")
@@ -32,15 +30,13 @@ def weather_rain():
     byValueCondition = etree.SubElement(condition, "ByValueCondition")
     simulationTimeCondition = etree.SubElement(byValueCondition, "SimulationTimeCondition", rule="greaterThan", value="4")
 
-    return root
+    return maneuverGroup
 
 def weather_snow():
-    root = etree.Element("ManeuverGroup")
-    root.set("maximumExecutionCount", "1")
-    root.set("name", "new_maneuverGroup")
+    maneuverGroup = etree.Element("ManeuverGroup", maximumExecutionCount="1", name="weather_maneuver_group")
 
-    actors = etree.SubElement(root, "Actors", selectTriggeringEntities="false")
-    maneuver = etree.SubElement(root, "Maneuver", name="Maneuver_weather_event")
+    actors = etree.SubElement(maneuverGroup, "Actors", selectTriggeringEntities="false")
+    maneuver = etree.SubElement(maneuverGroup, "Maneuver", name="Maneuver_weather_event")
     event = etree.SubElement(maneuver, "Event", maximumExecutionCount="1", name="weather_event", priority="overwrite")
     action = etree.SubElement(event, "Action", name="rainy_action")
     globalAction = etree.SubElement(action, "GlobalAction")
@@ -64,7 +60,7 @@ def weather_snow():
     byValueCondition = etree.SubElement(condition, "ByValueCondition")
     simulationTimeCondition = etree.SubElement(byValueCondition, "SimulationTimeCondition", rule="greaterThan", value="4")
 
-    return root
+    return maneuverGroup
 
 
 
