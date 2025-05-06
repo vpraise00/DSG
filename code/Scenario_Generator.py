@@ -3,19 +3,24 @@ from pathlib import Path
 from lxml import etree as ET
 
 from falling_obj_rootcause import *
-from rightmost_construction_rootcause import *
+#from rightmost_construction_rootcause import *
+from speed_constraint import speed_constraint_action
 
 def arg_parser():
     parser = argparse.ArgumentParser(description="Add disturbance to the scenario.")
     parser.add_argument("input_file", type=str, help="Input File (.xosc)")
-    parser.add_argument("--disturbance", type=str, choices=["rain", "snow", "fallOBJ", "construction"], 
-                        help="Disturbance type [rain, snow, fallOBJ, construction]", required=True)
-    parser.add_argument("--obj_pos", type=str, choices=["relative", "link"], default="relative", 
+    parser.add_argument("--disturbance", type=str,
+                        choices=["rain", "snow", "fallOBJ", "construction", "speedConstraint"],
+                        help="Disturbance type [rain, snow, fallOBJ, construction, speedConstraint]",
+                        required=True)
+    parser.add_argument("--obj_pos", type=str, choices=["relative", "link"], default="relative",
                         help="Object position definition [relative, link]")
-    parser.add_argument("--action", type=str, choices=["lanechange", "stop"], default="stop", 
+    parser.add_argument("--action", type=str, choices=["lanechange", "stop"], default="stop",
                         help="Action type only required in fallOBJ [lanechange, stop]")
-    parser.add_argument("--distance", type=float, default=30, 
+    parser.add_argument("--distance", type=float, default=30,
                         help="Relative distance in meters for object placement (only used for relative mode)")
+    parser.add_argument("--target-speed", type=float, default=17.5,
+                        help="Target speed for speedConstraint (m/s)")
     args = parser.parse_args()
 
     return args
@@ -36,16 +41,24 @@ def main():
     input_path = Path(args.input_file).resolve()
     data_dir = input_path.parent
     output_path = data_dir / f"{input_path.name[:-5]}_{args.disturbance}.xosc"
-    mgeo_dir = data_dir / "MGeo"
-    mgeo_link_set_path = mgeo_dir / "link_set.json"
+    # mgeo_dir = data_dir / "MGeo"
+    # mgeo_link_set_path = mgeo_dir / "link_set.json"
 
-    if not input_path.is_file():
-        raise FileNotFoundError(f"Input file {input_path} does not exist.")
-    if not mgeo_link_set_path.is_file():
-        raise FileNotFoundError(f"MGeo link set file {mgeo_link_set_path} does not exist.")
+    # if not input_path.is_file():
+    #     raise FileNotFoundError(f"Input file {input_path} does not exist.")
+    # if not mgeo_link_set_path.is_file():
+    #     raise FileNotFoundError(f"MGeo link set file {mgeo_link_set_path} does not exist.")
     
     tree = ET.parse(input_path)
     root = tree.getroot()
+
+    # speedConstraint용 객체·액션 준비
+    if args.disturbance == "speedConstraint":
+        obj, init, mg = speed_constraint_action(
+            scenario_root=root,
+            place_distance=args.distance,
+            target_speed=args.target_speed
+        )
 
     # 1. Entities 블록에 falling object 추가
     entities = root.find(".//Entities")
@@ -75,6 +88,10 @@ def main():
         from rightmost_construction_rootcause import add_rightmost_construction
         entities.append(falled_object())
         actions.append(add_rightmost_construction(root, mgeo_link_set_path, 2*args.distance))
+    if args.disturbance == "speedConstraint":
+        entities.append(obj)
+        actions.append(init)
+        act.append(mg)
 
     if args.action == "lanechange":
         act.append(add_Ego_lanechange_action(root, args.distance, args.obj_pos))
