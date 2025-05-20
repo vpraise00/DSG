@@ -3,7 +3,7 @@ from pathlib import Path
 from lxml import etree as ET
 
 from falling_obj_rootcause import *
-#from rightmost_construction_rootcause import *
+from rightmost_construction_rootcause import *
 from speed_constraint import speed_constraint_action
 
 def arg_parser():
@@ -41,13 +41,13 @@ def main():
     input_path = Path(args.input_file).resolve()
     data_dir = input_path.parent
     output_path = data_dir / f"{input_path.name[:-5]}_{args.disturbance}.xosc"
-    # mgeo_dir = data_dir / "MGeo"
-    # mgeo_link_set_path = mgeo_dir / "link_set.json"
+    mgeo_dir = data_dir / "MGeo"
+    mgeo_link_set_path = mgeo_dir / "link_set.json"
 
-    # if not input_path.is_file():
-    #     raise FileNotFoundError(f"Input file {input_path} does not exist.")
-    # if not mgeo_link_set_path.is_file():
-    #     raise FileNotFoundError(f"MGeo link set file {mgeo_link_set_path} does not exist.")
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Input file {input_path} does not exist.")
+    if not mgeo_link_set_path.is_file():
+        raise FileNotFoundError(f"MGeo link set file {mgeo_link_set_path} does not exist.")
     
     tree = ET.parse(input_path)
     root = tree.getroot()
