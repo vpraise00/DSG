@@ -5,7 +5,15 @@ import random
 from pathlib import Path
 from lxml import etree
 
+<<<<<<< Updated upstream
 def agr_parser():
+=======
+from falling_obj_rootcause import *
+from rightmost_construction_rootcause import *
+from speed_constraint import speed_constraint_action
+
+def arg_parser():
+>>>>>>> Stashed changes
     parser = argparse.ArgumentParser(description="Add disturbance to the scenario.")
     parser.add_argument("input_file", type=str, help="Input File (.xosc)")
     parser.add_argument("--disturbance", type=str, choices=["rain", "snow", "fallOBJ"], 
@@ -33,11 +41,23 @@ if __name__ == "__main__":
     input_path = Path(args.input_file).resolve()
     data_dir = input_path.parent
     output_path = data_dir / f"{input_path.name[:-5]}_{args.disturbance}.xosc"
+<<<<<<< Updated upstream
 
     if not input_path.is_file():
         raise FileNotFoundError(f"Input file {input_path} does not exist.")
 
     tree = etree.parse(input_path)
+=======
+    mgeo_dir = data_dir / "MGeo"
+    mgeo_link_set_path = mgeo_dir / "link_set.json"
+
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Input file {input_path} does not exist.")
+    if not mgeo_link_set_path.is_file():
+        raise FileNotFoundError(f"MGeo link set file {mgeo_link_set_path} does not exist.")
+    
+    tree = ET.parse(input_path)
+>>>>>>> Stashed changes
     root = tree.getroot()
 
     maneuverGroup = None # Initialize maneuverGroup to None
