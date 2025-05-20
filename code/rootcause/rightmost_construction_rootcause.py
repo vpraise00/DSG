@@ -2,7 +2,7 @@ from pathlib import Path
 from lxml import etree as ET
 import pandas as pd
 
-from falling_obj_rootcause import get_ego_linkposition
+from rootcause.falling_obj_rootcause import get_ego_linkposition
 
 def get_road_network_path(scenario_root):
     road_network = scenario_root.find(".//RoadNetwork")

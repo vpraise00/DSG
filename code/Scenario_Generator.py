@@ -2,9 +2,9 @@ import argparse
 from pathlib import Path
 from lxml import etree as ET
 
-from falling_obj_rootcause import *
-from rightmost_construction_rootcause import *
-from speed_constraint import speed_constraint_action
+from rootcause.falling_obj_rootcause import *
+from rootcause.rightmost_construction_rootcause import *
+from rootcause.speed_constraint import speed_constraint_action
 
 def arg_parser():
     parser = argparse.ArgumentParser(description="Add disturbance to the scenario.")
@@ -76,16 +76,16 @@ def main():
         raise ValueError("Act element with name 'new_act' not found in new_story.")
 
     if args.disturbance == "rain":
-        from weather_rootcause import weather_rain
+        from rootcause.weather_rootcause import weather_rain
         act.append(weather_rain())
     if args.disturbance == "snow":
-        from weather_rootcause import weather_snow
+        from rootcause.weather_rootcause import weather_snow
         act.append(weather_snow())
     if args.disturbance == "fallOBJ":
         entities.append(falled_object())
         actions.append(private_storyboard(root, mgeo_link_set_path, args.distance, args.obj_pos))
     if args.disturbance == "construction":
-        from rightmost_construction_rootcause import add_rightmost_construction
+        from rootcause.rightmost_construction_rootcause import add_rightmost_construction
         entities.append(falled_object())
         actions.append(add_rightmost_construction(root, mgeo_link_set_path, 2*args.distance))
     if args.disturbance == "speedConstraint":

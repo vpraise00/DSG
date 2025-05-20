@@ -8,7 +8,7 @@ from typing import List
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, GenerationConfig
 
-# 1) Scenario_Generator.py 래퍼 (변경 없음)
+# 1) scenario_generator.py 래퍼 (변경 없음)
 def wrap_generate_scenario(argv: List[str]) -> str:
     p = subprocess.run([sys.executable] + argv, capture_output=True, text=True)
     if p.returncode != 0:
@@ -77,7 +77,7 @@ def main():
     input_file, user_req = sys.argv[1], sys.argv[2]
 
     system_prompt = (
-        "당신은 Scenario_Generator.py를 실행하기 위한 CLI 인자를 JSON으로 설계하는 전문가입니다. "
+        "당신은 scenario_generator.py를 실행하기 위한 CLI 인자를 JSON으로 설계하는 전문가입니다. "
         "실행 오류가 발생하면 JSON 수정을 반복합니다."
     )
     user_prompt = f"기반 시나리오 '{input_file}'에 '{user_req}'"
@@ -88,7 +88,7 @@ def main():
         # 1) Plan: 로컬 모델로 JSON 인자 생성
         plan = call_local_llm(system_prompt, user_prompt)
         argv = [
-            "Scenario_Generator.py", plan["input_file"],
+            "scenario_generator.py", plan["input_file"],
             "--disturbance", plan["disturbance"],
             "--distance", str(plan["distance"])
         ]
