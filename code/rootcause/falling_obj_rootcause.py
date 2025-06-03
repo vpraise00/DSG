@@ -4,18 +4,21 @@ import random
 import pandas as pd
 from pathlib import Path
 
+from utils import config as cf
+from utils.mgeo import *
+
 def falled_object():
     """
     Create a random object falling from the sky.
     """
 
-    scenario__object = etree.Element("ScenarioObject", name = "OBJ")
-    misc_object = etree.SubElement(scenario__object, "MiscObject", mass = "0", miscObjectCategory = "obstacle", name = "PE_Firewall_Orange")
+    scenario_object = etree.Element("ScenarioObject", name="OBJ")
+    misc_object = etree.SubElement(scenario_object, "MiscObject", mass="0", miscObjectCategory="obstacle", name="PE_Firewall_Orange")
     properties = etree.SubElement(misc_object, "Properties")
-    etree.SubElement(properties, "Property", name = "scale_x", value = "1.0")
-    etree.SubElement(properties, "Property", name = "scale_y", value = "1.0")
-    etree.SubElement(properties, "Property", name = "scale_z", value = "1.0")
-    return scenario__object
+    etree.SubElement(properties, "Property", name="scale_x", value="1.0")
+    etree.SubElement(properties, "Property", name="scale_y", value="1.0")
+    etree.SubElement(properties, "Property", name="scale_z", value="1.0")
+    return scenario_object
 
 def get_obj_position_from_private(scenario_root):
     """
@@ -200,51 +203,23 @@ def add_Ego_stop_action(scenario_root, distance_input, obj_pos):
                                             routingAlgorithm="assignedRoute", rule="lessThan", value=str(threshold))
     return mg
 
-# def private_storyboard(scenario_root):
-#     """
-#     Create a private storyboard for the object.
-#     """
-
-#     # Extract the ego link position from the scenario root
-#     ego_id, ego_index = get_ego_linkposition(scenario_root)
-
-#     new_index = random.randint(ego_index + 50, ego_index + 150)
-
-#     private = etree.Element("Private", entityRef = "OBJ")
-#     private_action = etree.SubElement(private, "PrivateAction")
-#     teleport_action = etree.SubElement(private_action, "TeleportAction")
-#     position = etree.SubElement(teleport_action, "Position")
-#     etree.SubElement(position, "LinkPosition", id = ego_id, index = str(new_index))
-#     return private
-
-# def private_storyboard_rel(scenario_root, distance="30"):
-#     """
-#     Create a private storyboard for the object using RelativeObjectPosition.
-#     The object will be placed 'distance' meters ahead of the Ego vehicle in its coordinate system.
-#     """
-#     private = etree.Element("Private", entityRef="OBJ")
-#     private_action = etree.SubElement(private, "PrivateAction")
-#     teleport_action = etree.SubElement(private_action, "TeleportAction")
-#     position = etree.SubElement(teleport_action, "Position")
-#     # 사용자가 입력한 distance 값을 dx로 적용 (dy와 dz는 0)
-#     etree.SubElement(position, "RelativeObjectPosition",
-#                      entityRef="Ego", dx=str(distance), dy="0", dz="0")
-#     return private
-
-def private_storyboard(scenario_root, mgeo_link_set_path, distance_input, obj_pos):
-    private = etree.Element("Private", entityRef = "OBJ")
+def private_storyboard(distance_input, obj_pos):
+    private = etree.Element("Private", entityRef="OBJ")
     private_action = etree.SubElement(private, "PrivateAction")
     teleport_action = etree.SubElement(private_action, "TeleportAction")
     position = etree.SubElement(teleport_action, "Position")
 
     if obj_pos == "link":
-        mgeo_link_set = pd.read_json(mgeo_link_set_path, encoding="utf-8")
+        ego_link, ego_index = get_ego_link()
+        ego_link_len = get_link_len(ego_link)
+        dst_index = 0
 
-        ego_id, ego_index = get_ego_linkposition(scenario_root)
-        ego_index = int(ego_index)
-        distance_input = int(distance_input)
-        dst_index = ego_index + distance_input if ego_index + distance_input < len(mgeo_link_set[mgeo_link_set["idx"] == ego_id]["points"].values[0]) else len(mgeo_link_set[mgeo_link_set["idx"] == ego_id]["points"].values[0]) - 1
-        etree.SubElement(position, "LinkPosition", id=ego_id, index=str(dst_index))
+        if ego_index + distance_input < ego_link_len:
+            dst_index = ego_index + distance_input
+        else:
+            dst_index = ego_link_len - 1
+
+        etree.SubElement(position, "LinkPosition", id=ego_link, index=str(dst_index))
     elif obj_pos == "relative":
         etree.SubElement(position, "RelativeObjectPosition",
                     entityRef="Ego", dx=str(distance_input), dy="0", dz="0")
@@ -252,41 +227,6 @@ def private_storyboard(scenario_root, mgeo_link_set_path, distance_input, obj_po
         raise ValueError("Invalid object position method. Choose 'relative' or 'link'.")
         
     return private
-
-    if obj_pos == "link":
-        mgeo_link_set = pd.read_json(mgeo_link_set_path, encoding="utf-8")
-
-        ego_id, ego_index = get_ego_linkposition(scenario_root)
-        ego_index = int(ego_index)
-        distance_input = int(distance_input)
-        dst_index = ego_index + distance_input if ego_index + distance_input < len(mgeo_link_set[mgeo_link_set["idx"] == ego_id]["points"].values[0]) else len(mgeo_link_set[mgeo_link_set["idx"] == ego_id]["points"].values[0]) - 1
-        etree.SubElement(position, "LinkPosition", id=ego_id, index=str(dst_index))
-    elif obj_pos == "relative":
-        etree.SubElement(position, "RelativeObjectPosition",
-                    entityRef="Ego", dx=str(distance_input), dy="0", dz="0")
-    else:
-        raise ValueError("Invalid object position method. Choose 'relative' or 'link'.")
-        
-    return private
-
-def get_ego_linkposition(scenario_root):
-    """
-    Get the ego link position from the scenario root.
-    It will return linkposion id and index.
-    """
-    lp = scenario_root.find(".//Private[@entityRef='Ego']/PrivateAction/TeleportAction/Position/LinkPosition")
-    if lp is None:
-        raise ValueError("Ego LinkPosition not found in the input scenario.")
-    
-    ego_id = lp.attrib.get("id")
-    try:
-        ego_index = int(lp.attrib.get("index", "0"))
-    except ValueError:
-        raise ValueError("Ego LinkPosition index is not an integer.")
-    
-    return ego_id, ego_index
-        
-    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="명령어 입력하면 시나리오 내부에 Entity와 Private Action을 생성")

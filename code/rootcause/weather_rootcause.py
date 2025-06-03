@@ -62,7 +62,13 @@ def weather_snow():
 
     return maneuverGroup
 
+def blackice():
+    global_action = etree.Element("GlobalAction")
+    environment_action = etree.SubElement(global_action, "EnvironmentAction")
+    environment = etree.SubElement(environment_action, "Environment", name="blackice")
+    road_condition = etree.SubElement(environment, "RoadCondition", frictionScaleFactor="0", wetness="wetWithPuddles")
 
+    return global_action
 
 if __name__ == "__main__":
     # base_dir = Path(__file__).resolve().parent.parent
